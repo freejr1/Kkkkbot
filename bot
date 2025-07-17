@@ -1,0 +1,44 @@
+import requests
+from telebot import TeleBot
+from telebot.types import Message
+
+# Token do bot e ID do grupo autorizado
+bot = TeleBot("7862652022:AAG22CFcGrGavgTnMKbWjkq_qAqzVHVKjPo")
+ALLOWED_GROUP_ID = -1002607184549
+
+def check_group(message: Message):
+    if message.chat.id != ALLOWED_GROUP_ID:
+        bot.reply_to(message, "🚫 Este grupo não está autorizado a usar este bot!")
+        return False
+    return True
+
+@bot.message_handler(commands=['start'])
+def start(message: Message):
+    bot.reply_to(message, "👋 Bem-vindo!\nUse /like <uid> <region> <quantidade> para enviar likes.")
+
+@bot.message_handler(commands=['like'])
+def send_likes(message: Message):
+    if not check_group(message):
+        return
+    args = message.text.split()
+    if len(args) != 4:
+        bot.reply_to(message, "❌ Formato inválido!\nUse: /like <uid> <region> <quantidade>")
+        return
+
+    uid, region, count = args[1], args[2], args[3]
+
+    if not uid.isdigit() or not count.isdigit():
+        bot.reply_to(message, "⚠️ UID e quantidade devem ser números!")
+        return
+
+    url = f"https://likes-api-lkteam-v3.onrender.com/like?uid={uid}&region={region}&count={count}"
+    try:
+        response = requests.get(url, timeout=15)
+        if response.status_code == 200:
+            bot.reply_to(message, f"❤️ Likes enviados com sucesso para UID {uid} na região {region}!")
+        else:
+            bot.reply_to(message, f"❌ Erro ao enviar likes. Código: {response.status_code}")
+    except Exception as e:
+        bot.reply_to(message, f"❌ Erro na requisição: {e}")
+
+bot.polling()
